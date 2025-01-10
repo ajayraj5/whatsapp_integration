@@ -21,44 +21,51 @@ import json
 
 
 
+
 @frappe.whitelist(allow_guest=True)
 def webhook():
-    if frappe.request.method == "GET":
-        # Get the query parameters
-        mode = frappe.local.request.args.get("hub.mode")
-        token = frappe.local.request.args.get("hub.verify_token")
-        challenge = frappe.local.request.args.get("hub.challenge")
-        
-        # Log verification attempt
+    try:
+        # Log all incoming requests for debugging
         frappe.log_error(
-            message=f"Mode: {mode}, Token: {token}, Challenge: {challenge}",
-            title="WhatsApp Verification Attempt"
+            message={
+                "method": frappe.request.method,
+                "headers": dict(frappe.request.headers),
+                "args": dict(frappe.local.request.args),
+                "data": frappe.request.data
+            },
+            title="WhatsApp Webhook Request"
         )
-        
-        # Verify the token
-        if mode == "subscribe" and token == "TCBInfotech":
-            frappe.response.http_status_code = 200
-            return str(challenge)
-        
-        frappe.throw("Failed verification")
-    
-    elif frappe.request.method == "POST":
-        try:
-            # Get the webhook data
-            data = json.loads(frappe.request.data)
-            frappe.log_error(message=data, title="WhatsApp Webhook Data")
+
+        if frappe.request.method == "GET":
+            mode = frappe.local.request.args.get("hub.mode")
+            token = frappe.local.request.args.get("hub.verify_token")
+            challenge = frappe.local.request.args.get("hub.challenge")
             
-            # Return 200 OK
+            # Log verification parameters
+            frappe.log_error(
+                message=f"Verification Request - Mode: {mode}, Token: {token}, Challenge: {challenge}",
+                title="WhatsApp Verification Parameters"
+            )
+            
+            if mode and token and mode == "subscribe" and token == "abcdefgh":
+                if challenge:
+                    frappe.response.http_status_code = 200
+                    return str(challenge)
+            
+            frappe.throw("Verification parameters missing or invalid")
+        
+        elif frappe.request.method == "POST":
             frappe.response.http_status_code = 200
             return {"status": "success"}
             
-        except Exception as e:
-            frappe.log_error(f"Error processing webhook: {str(e)}", "Webhook Error")
-            frappe.response.http_status_code = 200
-            return {"status": "success"}
-    
-    else:
-        return {"status": "Method not allowed"}
+    except Exception as e:
+        frappe.log_error(
+            message=f"Webhook Error: {str(e)}\nFull traceback: {frappe.get_traceback()}",
+            title="WhatsApp Webhook Critical Error"
+        )
+        # Still return 200 for WhatsApp
+        frappe.response.http_status_code = 200
+        return {"status": "error", "message": str(e)}
 
 
 @frappe.whitelist()
