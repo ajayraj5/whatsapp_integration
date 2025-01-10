@@ -25,6 +25,7 @@ import json
 def webhook():
     if frappe.request.method == "GET":
         # Handle webhook verification
+        frappe.log_error("frappe.form_dict", frappe.form_dict)
         mode = frappe.form_dict.get("hub.mode")
         token = frappe.form_dict.get("hub.verify_token")
         challenge = frappe.form_dict.get("hub.challenge")
