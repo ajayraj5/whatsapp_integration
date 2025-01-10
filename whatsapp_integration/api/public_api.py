@@ -24,38 +24,41 @@ import json
 @frappe.whitelist(allow_guest=True)
 def webhook():
     if frappe.request.method == "GET":
-        # Handle webhook verification
-        frappe.log_error("frappe.form_dict", frappe.form_dict)
-        mode = frappe.form_dict.get("hub.mode")
-        token = frappe.form_dict.get("hub.verify_token")
-        challenge = frappe.form_dict.get("hub.challenge")
+        # Get the query parameters
+        mode = frappe.local.request.args.get("hub.mode")
+        token = frappe.local.request.args.get("hub.verify_token")
+        challenge = frappe.local.request.args.get("hub.challenge")
         
+        # Log verification attempt
+        frappe.log_error(
+            message=f"Mode: {mode}, Token: {token}, Challenge: {challenge}",
+            title="WhatsApp Verification Attempt"
+        )
+        
+        # Verify the token
         if mode == "subscribe" and token == "TCBInfotech":
-            return challenge
-        else:
-            frappe.throw("Failed verification")
+            frappe.response.http_status_code = 200
+            return str(challenge)
+        
+        frappe.throw("Failed verification")
     
     elif frappe.request.method == "POST":
         try:
             # Get the webhook data
-            body = frappe.request.data
-            data = json.loads(body) if body else "No Data"
-            
-            # Log the received data
+            data = json.loads(frappe.request.data)
             frappe.log_error(message=data, title="WhatsApp Webhook Data")
             
-            # Always return 200 OK
+            # Return 200 OK
             frappe.response.http_status_code = 200
             return {"status": "success"}
             
         except Exception as e:
             frappe.log_error(f"Error processing webhook: {str(e)}", "Webhook Error")
-            frappe.response.http_status_code = 200  # Still return 200
+            frappe.response.http_status_code = 200
             return {"status": "success"}
     
     else:
         return {"status": "Method not allowed"}
-
 
 
 @frappe.whitelist()
