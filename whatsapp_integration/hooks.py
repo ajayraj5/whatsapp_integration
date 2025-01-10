@@ -136,6 +136,11 @@ app_license = "mit"
 # Document Events
 # ---------------
 # Hook on document methods and events
+doc_events = {
+    "User": {
+        "on_update": "whatsapp_integration.api.public_api.send_whatsapp_message"
+    }
+}
 
 # doc_events = {
 # 	"*": {
