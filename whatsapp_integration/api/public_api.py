@@ -21,7 +21,6 @@ import json
 
 
 
-
 @frappe.whitelist(allow_guest=True)
 def webhook():
     try:
@@ -40,31 +39,45 @@ def webhook():
             mode = frappe.local.request.args.get("hub.mode")
             token = frappe.local.request.args.get("hub.verify_token")
             challenge = frappe.local.request.args.get("hub.challenge")
-            
+
             # Log verification parameters
             frappe.log_error(
                 message=f"Verification Request - Mode: {mode}, Token: {token}, Challenge: {challenge}",
                 title="WhatsApp Verification Parameters"
             )
-            
-            if mode and token and mode == "subscribe" and token == "abcdefgh":
+
+            # Replace "abcdefgh" with your actual verify token
+            VERIFY_TOKEN = "abcdefgh"
+
+            if mode == "subscribe" and token == VERIFY_TOKEN:
                 if challenge:
-                    frappe.response.http_status_code = 200
-                    return str(challenge)
-            
-            frappe.throw("Verification parameters missing or invalid")
-        
+                    frappe.response['http_status_code'] = 200
+                    return challenge  # Respond with the challenge to verify the webhook
+
+            frappe.response['http_status_code'] = 403
+            return {"error": "Invalid verification token or mode"}
+
         elif frappe.request.method == "POST":
-            frappe.response.http_status_code = 200
+            # Handle webhook events
+            data = frappe.request.data
+
+            # Log incoming data for debugging
+            frappe.log_error(
+                message={"data": data},
+                title="WhatsApp Webhook Event Data"
+            )
+
+            frappe.response['http_status_code'] = 200
             return {"status": "success"}
-            
+
     except Exception as e:
+        # Log critical errors for debugging
         frappe.log_error(
             message=f"Webhook Error: {str(e)}\nFull traceback: {frappe.get_traceback()}",
             title="WhatsApp Webhook Critical Error"
         )
-        # Still return 200 for WhatsApp
-        frappe.response.http_status_code = 200
+        # Respond with 200 to avoid retries from WhatsApp
+        frappe.response['http_status_code'] = 200
         return {"status": "error", "message": str(e)}
 
 
